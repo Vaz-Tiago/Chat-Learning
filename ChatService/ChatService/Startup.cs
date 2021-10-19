@@ -18,6 +18,7 @@ namespace ChatService
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSignalR();
+
             services.AddCors(options => 
             {
                 options.AddDefaultPolicy(builder => {
@@ -27,6 +28,10 @@ namespace ChatService
                         .AllowCredentials();
                 });
             });
+
+            services.AddSingleton<IDictionary<string, UserConnection>>(
+                opt => new Dictionary<string, UserConnection>()
+            );
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
