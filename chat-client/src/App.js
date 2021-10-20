@@ -10,9 +10,11 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 const App = () => {
   const [connection, setConnection] = useState();
   const [messages, setMessages] = useState([]);
+  const [users, setUsers] = useState([]);
 
   const joinRoom = async (user, room) => {
     try{
+
       // Create a connection
       const connection = new HubConnectionBuilder()
         .withUrl('https://localhost:5001/chat')
@@ -22,6 +24,16 @@ const App = () => {
         // Handlers -> Mesmo nome que foi dado no backend - ReceiveMessage
         connection.on('ReceiveMessage', (user, message) => {
           setMessages(messages => [...messages, { user, message }]);
+        })
+
+        connection.onclose(e => {
+          setConnection();
+          setMessages([]);
+          setUsers([]);
+        })
+
+        connection.on("UsersInRoom", (users) => {
+          setUsers(users);
         })
 
         await connection.start();
@@ -41,12 +53,25 @@ const App = () => {
     }
   }
 
+  const closeConnection = async () => {
+    try {
+      await connection.stop();
+    }catch(e){
+      console.log(e);
+    }
+  }
+
   return (
     <div className='app'>
       <h2>MyChat</h2>
       {!connection
         ? <Lobby joinRoom={joinRoom} />
-        : <Chat messages={messages} sendMessage={sendMessage} />
+        : <Chat 
+            messages={messages} 
+            sendMessage={sendMessage} 
+            closeConnection={closeConnection}
+            users={users}
+          />
       }
     </div>
   )

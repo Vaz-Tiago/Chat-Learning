@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 
@@ -26,6 +28,8 @@ namespace ChatService.Hubs
             await Clients.Group(userConnection.Room).SendAsync("ReceiveMessage", _botUser,
                 $"{userConnection.User} has joined {userConnection.Room}");
 
+            await SendConnectedUser(userConnection.Room);
+
             // Se não adicionar um grupo manda para todos que estiver conectados na aplicaçao
             //await Clients.All.SendAsync("ReceiveMessage", _botUser,
             //    $"{userConnection.User} has joined {userConnection.Room}");
@@ -38,6 +42,28 @@ namespace ChatService.Hubs
                 await Clients.Group(userConnection.Room)
                     .SendAsync("ReceiveMessage", userConnection.User, message);
             }
+        }
+
+        public override Task OnDisconnectedAsync(Exception exception)
+        {
+            if(_connections.TryGetValue(Context.ConnectionId, out UserConnection userConnection))
+            {
+                _connections.Remove(Context.ConnectionId);
+                Clients.Group(userConnection.Room)
+                    .SendAsync("ReceiveMessage", _botUser, $"{userConnection.User} has left");
+
+                SendConnectedUser(userConnection.Room);
+            }
+            return base.OnDisconnectedAsync(exception);
+        }
+
+        public Task SendConnectedUser(string room)
+        {
+            var users = _connections.Values
+                .Where(c => c.Room == room)
+                .Select(c => c.User);
+
+            return Clients.Group(room).SendAsync("UsersInRoom", users);
         }
     }
 }
